@@ -459,6 +459,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function updateLocalStorage() { localStorage.setItem('cart', JSON.stringify(cart)); }
 
+  // Hydrate active user from localStorage on load so profile shows data after login
+  try {
+    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+    if (storedUser && storedUser.id) {
+      activeUser = storedUser;
+      updateProfileFields(activeUser);
+      if (mainContent) mainContent.classList.remove('hidden');
+      if (loginSection) loginSection.classList.add('hidden');
+    }
+  } catch (e) {
+    console.debug('Could not hydrate user from localStorage:', e);
+  }
+
   // Minimal helper UI functions used by auth flows
   function showMainForUser(user) {
     activeUser = user;
@@ -1429,7 +1442,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     if (id === 'members') loadMembers();
     if (id === 'profile' && activeUser) {
-      // Fetch fresh user data from backend to ensure avatar is up-to-date
+      // Immediately populate profile fields from current activeUser
+      updateProfileFields(activeUser);
+      // Then try to refresh from backend/demo for latest data
       refreshUserProfile();
     }
   };
