@@ -433,6 +433,8 @@ function updateProfileFields(user) {
 
 // DOM ready
 window.addEventListener('DOMContentLoaded', () => {
+  ensureFloatingActions();
+
   // Elements
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
@@ -2798,21 +2800,11 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   // Add interactive elements to the book details page
-  function addInteractiveBookElements(book) {
-    // Add a reading progress indicator
-    const progressBar = document.createElement('div');
-    progressBar.className = 'fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500 transform scale-x-0 transition-transform duration-1000';
-    progressBar.id = 'readingProgress';
-    document.body.appendChild(progressBar);
-    
-    // Simulate reading progress
-    setTimeout(() => {
-      progressBar.style.transform = 'scaleX(1)';
-    }, 500);
-    
-    // Add floating action buttons
+  function ensureFloatingActions() {
+    if (document.getElementById('fabWishlist')) return;
+
     const floatingActions = document.createElement('div');
-    floatingActions.className = 'fixed bottom-8 right-8 flex flex-col gap-3 z-40';
+    floatingActions.className = 'fixed bottom-8 right-6 flex flex-col gap-3 z-40';
     floatingActions.innerHTML = `
       <button id="fabWishlist" class="bg-pink-500 text-white p-4 rounded-full shadow-lg hover:bg-pink-600 transition transform hover:scale-110" title="Add current book to Wishlist">
         ❤️
@@ -2820,7 +2812,7 @@ window.addEventListener('DOMContentLoaded', () => {
       <button id="fabShare" class="bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition transform hover:scale-110" title="Share this page">
         📤
       </button>
-      <button id="fabPreview" class="bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition transform hover:scale-110" title="Preview Sample / Scroll to top">
+      <button id="fabPreview" class="bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition transform hover:scale-110" title="Download / Scroll to top">
         📥
       </button>
     `;
@@ -2918,6 +2910,40 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Observe all sections
     document.querySelectorAll('section > div').forEach(section => {
+      observer.observe(section);
+    });
+  }
+
+  function addInteractiveBookElements(book) {
+    // Add a reading progress indicator (if not already added)
+    if (!document.getElementById('readingProgress')) {
+      const progressBar = document.createElement('div');
+      progressBar.className = 'fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500 transform scale-x-0 transition-transform duration-1000';
+      progressBar.id = 'readingProgress';
+      document.body.appendChild(progressBar);
+
+      setTimeout(() => {
+        progressBar.style.transform = 'scaleX(1)';
+      }, 500);
+    }
+
+    ensureFloatingActions();
+    
+    // Add scroll animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-fade-in-up');
+        }
+      });
+    }, observerOptions);
+    
+    document.querySelectorAll('section').forEach(section => {
       observer.observe(section);
     });
   }
