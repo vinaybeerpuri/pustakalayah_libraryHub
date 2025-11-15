@@ -409,31 +409,51 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST avatar upload (protected)
+// Helper to persist avatar file path on a user and return sanitized record
+async function persistAvatarForUser(userId, file, req) {
+  if (!file) {
+    throw Object.assign(new Error('No file uploaded'), { status: 400 });
+  }
+
+  await initializeUsers();
+  const data = await fs.readFile(USERS_FILE, 'utf8');
+  const users = JSON.parse(data);
+  const idx = users.findIndex(u => u.id === userId);
+  if (idx === -1) {
+    throw Object.assign(new Error('User not found'), { status: 404 });
+  }
+
+  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/avatars/${file.filename}`;
+  users[idx].avatar = fileUrl;
+  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+
+  const { password, ...userWithoutPassword } = users[idx];
+  return userWithoutPassword;
+}
+
+// POST avatar upload by ID (protected)
 router.post('/:id/avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
-    await initializeUsers();
     const userId = parseInt(req.params.id);
-    const file = req.file;
-    if (!file) return res.status(400).json({ error: 'No file uploaded' });
-
-    // Read users file
-    const data = await fs.readFile(USERS_FILE, 'utf8');
-    const users = JSON.parse(data);
-    const idx = users.findIndex(u => u.id === userId);
-    if (idx === -1) return res.status(404).json({ error: 'User not found' });
-
-    // Build public URL for the uploaded file
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/avatars/${file.filename}`;
-
-    users[idx].avatar = fileUrl;
-    await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-
-    const { password, ...userWithoutPassword } = users[idx];
-    res.json(userWithoutPassword);
+    const updatedUser = await persistAvatarForUser(userId, req.file, req);
+    res.json(updatedUser);
   } catch (error) {
     console.error('Avatar upload error:', error);
-    res.status(500).json({ error: 'Failed to upload avatar' });
+    const status = error.status || 500;
+    res.status(status).json({ error: error.message || 'Failed to upload avatar' });
+  }
+});
+
+// POST current user's avatar (protected) – matches frontend /api/users/me/avatar
+router.post('/me/avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
+  try {
+    const userId = parseInt(req.user.id);
+    const updatedUser = await persistAvatarForUser(userId, req.file, req);
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Current user avatar upload error:', error);
+    const status = error.status || 500;
+    res.status(status).json({ error: error.message || 'Failed to upload avatar' });
   }
 });
 

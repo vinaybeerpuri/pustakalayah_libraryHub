@@ -1386,7 +1386,6 @@ window.addEventListener('DOMContentLoaded', () => {
     editProfileBtn.classList.toggle('hidden', isEditing);
     saveProfileBtn.classList.toggle('hidden', !isEditing);
     cancelProfileBtn.classList.toggle('hidden', !isEditing);
-    changeAvatarBtn.disabled = !isEditing;
   }
 
   // Refresh user profile from backend to ensure avatar and other data are up-to-date
@@ -2799,7 +2798,6 @@ window.addEventListener('DOMContentLoaded', () => {
     ];
   }
   
-  // Add interactive elements to the book details page
   function ensureFloatingActions() {
     if (document.getElementById('fabWishlist')) return;
 
@@ -2818,20 +2816,16 @@ window.addEventListener('DOMContentLoaded', () => {
     `;
     document.body.appendChild(floatingActions);
 
-    // Hook up floating action buttons
     const fabWishlist = document.getElementById('fabWishlist');
     const fabShare = document.getElementById('fabShare');
     const fabPreview = document.getElementById('fabPreview');
 
-    // Pink: add current book (from bookDetails) to wishlist, if possible
     fabWishlist?.addEventListener('click', async () => {
       try {
-        // If we're on the bookDetails section and it has a button wired, reuse its dataset
         const addToWishlistBtn = document.getElementById('addToWishlistBtn');
         const bookId = addToWishlistBtn?.dataset.bookId ? parseInt(addToWishlistBtn.dataset.bookId) : NaN;
         const bookTitle = addToWishlistBtn?.dataset.bookTitle || '';
         const bookAuthor = addToWishlistBtn?.dataset.bookAuthor || '';
-
         if (!bookId || Number.isNaN(bookId)) {
           showNotification('Open a book first to add it to your wishlist.', 'warning');
           return;
@@ -2847,7 +2841,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Blue: share current page URL (uses Web Share API if available, else copy link)
     fabShare?.addEventListener('click', async () => {
       const shareUrl = window.location.href;
       const shareTitle = document.title || 'Pustakalayah LibraryHub';
@@ -2871,18 +2864,14 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Green: scroll to book preview / top of current section
     fabPreview?.addEventListener('click', () => {
       fabPreview.classList.add('animate-bounce');
       setTimeout(() => fabPreview.classList.remove('animate-bounce'), 800);
 
-      // Try to scroll to the book details preview button first
       const previewButton = document.getElementById('previewSampleBtn');
       if (previewButton) {
-        // Ensure bookDetails section is visible if user/admin is viewing a book
         const bookDetailsSection = document.getElementById('bookDetails');
         if (bookDetailsSection && bookDetailsSection.classList.contains('hidden')) {
-          // If hidden, just smooth scroll to top instead of forcing navigation
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
           previewButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2890,38 +2879,16 @@ window.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Fallback: smooth scroll to top of page
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-    
-    // Add scroll animations
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
-    };
-    
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animate-fade-in-up');
-        }
-      });
-    }, observerOptions);
-    
-    // Observe all sections
-    document.querySelectorAll('section > div').forEach(section => {
-      observer.observe(section);
     });
   }
 
   function addInteractiveBookElements(book) {
-    // Add a reading progress indicator (if not already added)
     if (!document.getElementById('readingProgress')) {
       const progressBar = document.createElement('div');
       progressBar.className = 'fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500 transform scale-x-0 transition-transform duration-1000';
       progressBar.id = 'readingProgress';
       document.body.appendChild(progressBar);
-
       setTimeout(() => {
         progressBar.style.transform = 'scaleX(1)';
       }, 500);
@@ -2929,12 +2896,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     ensureFloatingActions();
     
-    // Add scroll animations
     const observerOptions = {
       threshold: 0.1,
       rootMargin: '0px 0px -50px 0px'
     };
-    
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -2942,11 +2907,12 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
     }, observerOptions);
-    
     document.querySelectorAll('section').forEach(section => {
       observer.observe(section);
     });
   }
+
+  ensureFloatingActions();
 
   const addToCartBtn = document.getElementById('addToCartBtn');
   addToCartBtn?.addEventListener('click', async () => {
@@ -3140,11 +3106,18 @@ window.addEventListener('DOMContentLoaded', () => {
     avatarInput?.click();
   });
 
+  // Allow clicking the avatar itself to pick a new image
+  profileAvatar?.addEventListener('click', () => {
+    avatarInput?.click();
+  });
+
   // Handle local file selection for avatar
   avatarInput?.addEventListener('change', async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     await handleAvatarFile(file);
+    // Reset input so selecting the same file again triggers change
+    e.target.value = '';
   });
 
   // Show avatar gallery modal and populate
