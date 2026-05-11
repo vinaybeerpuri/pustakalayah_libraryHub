@@ -1,0 +1,105 @@
+// AHA 追踪模块
+(function () {
+  const TRACKING_KEY = "aha_payload";
+  const TRACK_ENDPOINT = "https://api.ahalab.io/order/client/track";
+  const AFFILIATE_PAYMENT_ENDPOINT = "https://api.ahalab.io/ads/payment/affiliate";
+
+  const queryString = window.location.search;
+  const urlParams = new URLSearchParams(queryString);
+
+  const orderIdFromUrl = urlParams.get("AHA_ORDER_ID");
+  const campaignIdFromUrl = urlParams.get("AHA_CAMPAIGN_ID");
+
+
+  const clientIdFromScript = document.currentScript?.getAttribute("data-aha-client-id");
+
+  const getCurrentUrl = () => {
+    const url = new URL(window.location);
+    return url.origin + url.pathname;
+  };
+
+  let ahaPayload = JSON.parse(window.localStorage.getItem(TRACKING_KEY) || "{}");
+
+  const effectiveOrderId = orderIdFromUrl || ahaPayload?.orderId;
+  const effectiveCampaignId = campaignIdFromUrl || ahaPayload?.campaignId;
+  const effectiveClientId = clientIdFromScript || ahaPayload?.clientId;
+
+  const ahaTracker = {
+
+    ready: !!(effectiveOrderId && effectiveCampaignId && effectiveClientId),
+
+    payload: {
+      orderId: effectiveOrderId,
+      campaignId: effectiveCampaignId,
+      clientId: effectiveClientId
+    },
+
+    init: function () {
+      if (orderIdFromUrl && campaignIdFromUrl && clientIdFromScript) {
+        const payload = {
+          orderId: orderIdFromUrl,
+          campaignId: campaignIdFromUrl,
+          clientId: clientIdFromScript
+        };
+
+        window.localStorage.setItem(TRACKING_KEY, JSON.stringify(payload));
+
+        this.ready = true;
+        this.payload = payload;
+
+        // 发送首次进入追踪
+        this.track([
+          {
+            name: "attrition",
+            params: {}
+          }
+        ]);
+      }
+    },
+
+    track: function (eventsArray) {
+      ahaPayload = JSON.parse(window.localStorage.getItem(TRACKING_KEY) || "{}");
+
+      if (ahaPayload.orderId && ahaPayload.clientId && ahaPayload.campaignId) {
+        fetch(TRACK_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            events: eventsArray,
+            orderId: ahaPayload.orderId,
+            clientId: ahaPayload.clientId,
+            campaignId: ahaPayload.campaignId,
+            url: getCurrentUrl()
+          })
+        });
+      }
+    },
+
+    purchase: function (purchaseData) {
+      ahaPayload = JSON.parse(window.localStorage.getItem(TRACKING_KEY) || "{}");
+
+      const body = {
+        orderId: ahaPayload.orderId,
+        clientId: ahaPayload.clientId,
+        campaignId: ahaPayload.campaignId,
+        ...purchaseData
+      };
+
+      return fetch(AFFILIATE_PAYMENT_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      }).then(res => res.json());
+    }
+  };
+
+  // 挂载到全局（可被调用）
+  window.ahaTracker = ahaTracker;
+
+  // 自动初始化
+  ahaTracker.init();
+})();
